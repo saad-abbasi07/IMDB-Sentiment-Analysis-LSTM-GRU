@@ -4,17 +4,27 @@ import tensorflow as tf
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 import pickle
 
+# -----------------------
 # Load model & tokenizer
+# -----------------------
 model = tf.keras.models.load_model("imdb_sentiment_model.h5")
 with open("tokenizer.pkl", "rb") as f:
     tokenizer = pickle.load(f)
 
-max_len = 200
+max_len = 200  # same as used in training
 
+# -----------------------
+# FastAPI setup
+# -----------------------
 app = FastAPI(title="IMDB Sentiment API")
 
 class Review(BaseModel):
     text: str
+
+# ---- ROOT FIX ----
+@app.get("/")
+def home():
+    return {"message": "API is live. Use POST /predict with JSON {'text': 'your text'}"}
 
 @app.post("/predict")
 def predict_sentiment(review: Review):
