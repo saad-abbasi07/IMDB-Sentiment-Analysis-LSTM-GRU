@@ -1,45 +1,27 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import tensorflow as tf
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 import pickle
 
-# -----------------------
-# Load model & tokenizer
-# -----------------------
 model = tf.keras.models.load_model("imdb_sentiment_model.h5")
-with open("tokenizer.pkl", "rb") as f:
-    tokenizer = pickle.load(f)
+tokenizer = pickle.load(open("tokenizer.pkl", "rb"))
 
-max_len = 200  # same as used in training
+max_len = 200
 
-# -----------------------
-# FastAPI setup
-# -----------------------
-app = FastAPI(title="IMDB Sentiment API")
-
-# ---- CORS ----
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # or replace "*" with your web app URL for security
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app = FastAPI()
 
 class Review(BaseModel):
     text: str
 
-# ---- ROOT ----
 @app.get("/")
 def home():
-    return {"message": "API is live. Use POST /predict with JSON {'text': 'your text'}"}
+    return {"message": "API is live"}
 
 @app.post("/predict")
-def predict_sentiment(review: Review):
+def predict(review: Review):
     seq = tokenizer.texts_to_sequences([review.text])
     padded = pad_sequences(seq, maxlen=max_len, padding='post')
-    pred = model.predict(padded)[0][0]
-    sentiment = "Positive" if pred > 0.5 else "Negative"
-    return {"sentiment": sentiment, "score": float(pred)}
+    score = model.predict(padded)[0][0]
+    sentiment = "Positive" if score > 0.5 else "Negative"
+    return {"sentiment": sentiment, "score": float(score)}
