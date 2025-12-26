@@ -3,11 +3,14 @@ from pydantic import BaseModel
 import tensorflow as tf
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 import pickle
+import numpy as np
 
+# Load model and tokenizer
 model = tf.keras.models.load_model("imdb_sentiment_model.h5")
-tokenizer = pickle.load(open("tokenizer.pkl", "rb"))
+with open("tokenizer.pkl", "rb") as f:
+    tokenizer = pickle.load(f)
 
-max_len = 200
+MAX_LEN = 200  # same length used during training
 
 app = FastAPI()
 
@@ -15,13 +18,17 @@ class Review(BaseModel):
     text: str
 
 @app.get("/")
-def home():
+def root():
     return {"message": "API is live"}
 
 @app.post("/predict")
 def predict(review: Review):
+    # Preprocess input text
     seq = tokenizer.texts_to_sequences([review.text])
-    padded = pad_sequences(seq, maxlen=max_len, padding='post')
-    score = model.predict(padded)[0][0]
-    sentiment = "Positive" if score > 0.5 else "Negative"
-    return {"sentiment": sentiment, "score": float(score)}
+    padded = pad_sequences(seq, maxlen=MAX_LEN, padding='post', truncating='post')
+    
+    # Make prediction
+    score = float(model.predict(padded)[0][0])
+    sentiment = "Positive" if score >= 0.5 else "Negative"
+    
+    return {"sentiment": sentiment, "score": score}
